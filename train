@@ -1,0 +1,58 @@
+import cv2
+import os
+import numpy as np
+from mtcnn import MTCNN
+
+# Ensure the path exists
+def assure_path_exists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+# Initialize webcam
+vid_cam = cv2.VideoCapture(0)
+
+# Initialize MTCNN face detector
+detector = MTCNN()
+
+# Get user name
+face_id = input("Enter name: ").strip()
+assure_path_exists(f"training_data/{face_id}")
+
+count = 0
+
+while True:
+    # Capture frame
+    _, frame = vid_cam.read()
+
+    # Convert to RGB (MTCNN requires RGB images)
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Detect faces
+    faces = detector.detect_faces(rgb_frame)
+
+    for face in faces:
+        x, y, width, height = face['box']
+        x, y = max(0, x), max(0, y)  # Ensure no negative values
+
+        # Extract face region
+        face_img = frame[y:y+height, x:x+width]
+        gray_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+
+        count += 1
+
+        # Save face image
+        cv2.imwrite(f"training_data/{face_id}/{count}.jpg", gray_face)
+
+        # Draw bounding box
+        cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
+
+    # Show video frame
+    cv2.imshow('Face Capture', frame)
+
+    # Stop capturing with 'q' or when enough images are taken
+    if cv2.waitKey(1) & 0xFF == ord('q') or count >= 250:
+        break
+
+# Release resources
+vid_cam.release()
+cv2.destroyAllWindows()
